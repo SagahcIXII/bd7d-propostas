@@ -1618,9 +1618,19 @@ function carregarProp(id){
   document.getElementById('o-pag').value=c.pagamento||'';
   // Reset itens ANTES de carregar para garantir que não vaza da proposta anterior
   itens=[];frentes=[];
-  // Carregar itens da proposta (suporta tanto campos.itens quanto p.itens do Neon)
-  const itensData = c.itens || [];
-  const frentesData = c.frentes || [];
+  // Determinar a fonte correta dos itens
+  // Prioridade: p.campos.itens > p.itens > []
+  let itensData = [];
+  if(p.campos && Array.isArray(p.campos.itens)) {
+    itensData = p.campos.itens; // Estrutura localStorage: {campos:{itens:[]}}
+  } else if(Array.isArray(c.itens)) {
+    itensData = c.itens; // Estrutura Neon achatada
+  }
+  // Verificar consistência: se itens têm número mas não correspondem ao número da proposta
+  // (sinal de dado corrompido), mostrar aviso
+  const numAtual = c.numero || p.numero || '';
+  console.log('[carregarProp] Carregando proposta', numAtual, 'itens:', itensData.length, JSON.stringify(itensData.map(i=>i.desc)));
+  const frentesData = (p.campos && p.campos.frentes) ? p.campos.frentes : (c.frentes || []);
   // Normalizar cada item garantindo todos os campos necessários
   itens = JSON.parse(JSON.stringify(itensData)).map(it=>({
     desc: it.desc||'',
