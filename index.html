@@ -26,7 +26,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sidebar{width:240px;background:var(--accent);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s;}
 .sb-logo{padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,.1);}
 .sb-logo-row{display:flex;align-items:center;gap:10px;}
-.sb-logo-img{width:38px;height:38px;object-fit:contain;filter:invert(1);flex-shrink:0;}
+.sb-logo-img{width:38px;height:38px;object-fit:contain;flex-shrink:0;}
 .sb-logo-text .name{font-size:15px;font-weight:600;color:#fff;letter-spacing:.02em;}
 .sb-logo-text .sub{font-size:10px;color:rgba(255,255,255,.45);letter-spacing:.08em;text-transform:uppercase;}
 .sb-nav{padding:10px 8px;flex:1;overflow-y:auto;}
@@ -285,7 +285,7 @@ textarea{resize:vertical;min-height:60px;}
 <div id="login-screen" style="display:none;">
   <div class="login-box">
     <div style="text-align:center;margin-bottom:20px;">
-      <img src="https://sagahcixii.github.io/bd7d-propostas/logo-pdf.png" style="height:52px;width:auto;object-fit:contain;">;width:auto;object-fit:contain;">
+      <img src="https://sagahcixii.github.io/bd7d-propostas/logo-pdf.png" style="height:52px;width:auto;object-fit:contain;">
     </div>
     <div class="login-title">BD7D Propostas</div>
     <div class="login-sub">Acesso restrito — faça login para continuar</div>
@@ -907,14 +907,22 @@ async function syncDown(){
   if(!syncOk()){setSyncStatus('local');return;}
   setSyncStatus('syncing');
   try{
+    // Backup dos dados locais antes de sincronizar
+    try{const cur=localStorage.getItem('bd7d_v3');if(cur)localStorage.setItem('bd7d_v3_backup',cur);}catch(e){}
     const r=await fetch(`${API_BASE}/api/sync`,{headers:authHeaders()});
     if(r.status===401){clearToken();mostrarLogin();return;}
     const j=await r.json();
     if(!j.ok)throw new Error(j.error);
     const d=j.data;
-    if(d.propostas) state.propostas=d.propostas;
-    if(d.clientes)  state.clientes=d.clientes;
-    if(d.catalogo)  state.catalogo=d.catalogo;
+    // Só sobrescreve se o Neon tiver dados (evita apagar dados locais com banco vazio)
+    if(d.propostas && d.propostas.length > 0) state.propostas=d.propostas;
+    else if(d.propostas && d.propostas.length === 0 && state.propostas.length > 0){
+      // Neon vazio mas temos dados locais → fazer upload automático
+      console.log('Neon vazio, enviando dados locais...');
+      setTimeout(syncUp, 500);
+    }
+    if(d.clientes && d.clientes.length > 0) state.clientes=d.clientes;
+    if(d.catalogo && d.catalogo.length > 0) state.catalogo=d.catalogo;
     if(d.config && Object.keys(d.config).length) state.config={...state.config,...d.config};
     save(); // espelha no localStorage também
     applyCfg();renderHist();renderCli();renderCat();
@@ -1455,6 +1463,41 @@ function syncIdentidadeVisual(){
   if(posEl)posEl.value=wmc.pos||'bottom-left';
   if(sizeEl)sizeEl.value=wmc.size||220;
   if(opEl)opEl.value=wmc.opacity||12;
+}
+
+
+function recuperarDadosLocais(){
+  // Tenta ler um backup do localStorage antes da última sync
+  const backup = localStorage.getItem('bd7d_v3_backup');
+  const atual = localStorage.getItem('bd7d_v3');
+  
+  let dados = null;
+  // Tentar o backup primeiro
+  if(backup){
+    try{ dados = JSON.parse(backup); }catch(e){}
+  }
+  // Se não tem backup, usar o atual
+  if(!dados && atual){
+    try{ dados = JSON.parse(atual); }catch(e){}
+  }
+  
+  if(!dados || (!dados.propostas?.length && !dados.clientes?.length)){
+    alert('Nenhum dado local encontrado para recuperar.\nSe você tem propostas salvas em outro browser ou dispositivo, use "Baixar do banco".');
+    return;
+  }
+  
+  const total = (dados.propostas?.length||0) + (dados.clientes?.length||0);
+  if(!confirm(`Encontrei ${dados.propostas?.length||0} proposta(s) e ${dados.clientes?.length||0} cliente(s) no cache local.\n\nDeseja restaurar e enviar para o banco?`)) return;
+  
+  if(dados.propostas?.length) state.propostas = dados.propostas;
+  if(dados.clientes?.length) state.clientes = dados.clientes;
+  if(dados.catalogo?.length) state.catalogo = dados.catalogo;
+  
+  save();
+  renderHist();renderCli();renderCat();
+  
+  // Enviar para o banco
+  syncUp().then(()=>alert('Dados recuperados e enviados para o banco com sucesso!'));
 }
 
 function salvarCfg(){
