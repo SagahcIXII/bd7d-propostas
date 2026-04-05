@@ -332,26 +332,20 @@ textarea{resize:vertical;min-height:60px;}
     </div>
   </div>
   <div class="sb-nav">
-    <div style="padding:10px 8px 6px;">
-      <button class="btn btn-primary" style="width:100%;justify-content:center;gap:6px;padding:9px 16px;" onclick="novaProposta();goSec('nova',document.getElementById('nav-nova-btn'))">
-        <span style="font-size:16px;line-height:1;">+</span> Nova Proposta
-      </button>
-    </div>
     <div class="nav-lbl">Principal</div>
-    <button class="nav-it" id="nav-nova-btn" onclick="goSec('nova',this)" style="display:none;"></button>
+    <button class="nav-it" id="nav-propostas-btn" onclick="goSec('propostas',this)"><span class="ic">📋</span> Propostas</button>
     <button class="nav-it" onclick="goSec('dash',this)"><span class="ic">◈</span> Dashboard</button>
-    <button class="nav-it" onclick="goSec('hist',this)"><span class="ic">≡</span> Histórico</button>
+    <button class="nav-it" onclick="goSec('hist',this)"><span class="ic">📜</span> Histórico</button>
     <div class="nav-lbl" style="margin-top:12px;">Cadastros</div>
     <button class="nav-it" onclick="goSec('clientes',this)"><span class="ic">◎</span> Clientes</button>
     <button class="nav-it" onclick="goSec('catalogo',this)"><span class="ic">⊞</span> Catálogo</button>
     <div class="nav-lbl" style="margin-top:12px;">Sistema</div>
     <button class="nav-it" onclick="goSec('config',this)"><span class="ic">⚙</span> Configurações</button>
-  <div class="nav-lbl" style="margin-top:12px;">Conta</div>
-  <button class="nav-it" onclick="abrirModalSenha()"><span class="ic">🔑</span> Alterar senha</button>
-  <button class="nav-it" id="btn-nav-users" style="display:none;" onclick="abrirModalUsers()"><span class="ic">👥</span> Usuários</button>
-  <button class="nav-it" onclick="logout()" style="color:#ff6b6b;"><span class="ic">↩</span> Sair</button>
-  <div class="nav-lbl" style="margin-top:12px;">Nuvem</div>
-  <button class="nav-it" onclick="syncDown()"><span class="ic">⬇️</span> Sincronizar</button>
+    <div class="nav-lbl" style="margin-top:12px;">Conta</div>
+    <button class="nav-it" onclick="abrirModalSenha()"><span class="ic">🔑</span> Alterar senha</button>
+    <button class="nav-it" id="btn-nav-users" style="display:none;" onclick="abrirModalUsers()"><span class="ic">👥</span> Usuários</button>
+    <button class="nav-it" onclick="syncDown()"><span class="ic">⬇️</span> Sincronizar</button>
+    <button class="nav-it" onclick="logout()" style="color:#ff6b6b;"><span class="ic">↩</span> Sair</button>
   </div>
 </nav>
 
@@ -359,7 +353,7 @@ textarea{resize:vertical;min-height:60px;}
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:12px;">
       <button class="mobile-btn" onclick="toggleSB()">☰</button>
-      <span class="topbar-title" id="topbar-ttl">Nova Proposta</span><span id="prop-edit-badge" style="display:none;font-size:11px;font-weight:600;background:var(--blue-l);color:var(--blue);padding:2px 8px;border-radius:4px;margin-left:6px;">✏️ Editando</span>
+      <span class="topbar-title" id="topbar-ttl">Propostas</span><span id="prop-edit-badge" style="display:none;font-size:11px;font-weight:600;background:var(--blue-l);color:var(--blue);padding:2px 8px;border-radius:4px;margin-left:6px;">✏️ Editando</span>
       <span id="prop-vbadge" class="vbadge" style="margin-left:4px;">v1</span>
     </div>
     <div class="topbar-actions" id="topbar-acts"><div id="sync-status" style="margin-right:4px;"><span class="sync-local">💾 Local</span></div>
@@ -535,28 +529,15 @@ textarea{resize:vertical;min-height:60px;}
 
   <!-- HISTÓRICO -->
   <section class="section" id="section-hist">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <span style="font-size:13px;color:var(--text2);" id="hist-cnt">0 propostas</span>
-        <select id="hist-filter-status" onchange="renderHist()" style="font-size:12px;padding:5px 8px;width:auto;">
-          <option value="">Todos os status</option>
-          <option value="rascunho">Rascunho</option>
-          <option value="aguardando">Aguardando Resposta</option>
-          <option value="aceita">Aceita</option>
-          <option value="declinada">Declinada</option>
-          <option value="cancelada">Cancelada</option>
-          <option value="substituida">Substituída</option>
-          <option value="faturada">Faturada</option>
-          <option value="aguard_pag">Aguardando Pagamento</option>
-          <option value="pago">Pago</option>
-        </select>
+    <div id="hist-log-lista">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <span style="font-size:13px;color:var(--text2);" id="hist-log-cnt">0 eventos</span>
       </div>
-      <input type="text" placeholder="Buscar cliente ou número..." style="width:240px;font-size:12px;" oninput="renderHist(this.value)">
+      <div id="hist-log-content"></div>
     </div>
-    <div id="hist-lista"></div>
   </section>
 
-  <!-- CLIENTES -->
+    <!-- CLIENTES -->
   <section class="section" id="section-clientes">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <span style="font-size:13px;color:var(--text2);" id="cli-cnt">0 clientes</span>
@@ -1005,17 +986,26 @@ function applyCfg(){
 function goSec(id,btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-it').forEach(b=>b.classList.remove('active'));
-  document.getElementById('section-'+id).classList.add('active');
-  btn.classList.add('active');
-  const ttls={nova:'Proposta',dash:'Dashboard',hist:'Histórico',clientes:'Clientes',catalogo:'Catálogo',config:'Configurações'};
+  const sec=document.getElementById('section-'+id);
+  if(sec)sec.classList.add('active');
+  if(btn)btn.classList.add('active');
+  const ttls={nova:'Proposta',propostas:'Propostas',dash:'Dashboard',hist:'Histórico',clientes:'Clientes',catalogo:'Catálogo',config:'Configurações'};
   document.getElementById('topbar-ttl').textContent=ttls[id]||'';
-  document.getElementById('topbar-acts').style.display=id==='nova'?'flex':'none';
-  document.getElementById('prop-vbadge').style.display=id==='nova'?'':'none';
-  if(id==='hist')renderHist();
+  document.getElementById('topbar-acts').style.display='none';
+  document.getElementById('prop-vbadge').style.display='none';
+  if(id==='propostas'){renderPropostasList();
+    // Destacar nav-propostas-btn
+    document.getElementById('nav-propostas-btn')?.classList.add('active');}
+  if(id==='hist')renderHistLog();
   if(id==='clientes')renderCli();
   if(id==='catalogo')renderCat();
   if(id==='dash')renderDash();
   if(id==='config'){syncQRPreview();syncIdentidadeVisual();}
+  // Sincronizar ao sair de qualquer seção com dados
+  if(['propostas','nova'].includes(id) === false) {
+    if(save._timer) clearTimeout(save._timer);
+    save._timer = setTimeout(syncUp, 800);
+  }
 }
 function goTab(id,btn){
   document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
@@ -1311,9 +1301,12 @@ function salvarProposta(){
   if(save._timer)clearTimeout(save._timer);
   syncUp();
   atualizarTituloProposta('PC-'+v('p-num'),v('p-ver'));
-  const btn=document.querySelector('#topbar-acts .btn-primary');const orig=btn.textContent;
-  btn.textContent='✓ Salvo!';btn.style.background='#2d6a4f';
-  setTimeout(()=>{btn.textContent=orig;btn.style.background='';},1500);
+  // Registrar no log
+  const _logAcao = _propEditandoId !== null ? 'editou' : 'criou';
+  registrarLog(_logAcao, snap.numero, snap.cliente, snap.versao);
+  // Feedback visual
+  const salvarBtns=document.querySelectorAll('[onclick="salvarProposta()"]');
+  salvarBtns.forEach(btn=>{const orig=btn.textContent;btn.textContent='✓ Salvo!';btn.style.background='#2d6a4f';setTimeout(()=>{btn.textContent=orig;btn.style.background='';},1500);});
 }
 function incVer(v){const m=v.match(/v(\d+)/);return m?'v'+(parseInt(m[1])+1):v+'.1';}
 function updStatus(id,st){
@@ -1339,6 +1332,155 @@ function atualizarTituloProposta(num, ver){
   const badge = document.getElementById('prop-vbadge');
   if(ttl) ttl.textContent = num ? `PC-${num}` : 'Nova Proposta';
   if(badge) badge.textContent = ver || 'v1';
+}
+
+
+// ── Propostas: lista e edição ─────────────────────────────────
+function renderPropostasList(q=''){
+  const lista=document.getElementById('propostas-lista');
+  const cnt=document.getElementById('prop-lista-cnt');
+  if(!lista)return;
+  const stFil=document.getElementById('prop-lista-filter')?.value||'';
+  let fil=[...state.propostas].sort((a,b)=>new Date(b.timestamp||b.atualizado_em||0)-new Date(a.timestamp||a.atualizado_em||0));
+  if(stFil)fil=fil.filter(p=>p.status===stFil);
+  if(q&&q.length)fil=fil.filter(p=>(p.cliente||'').toLowerCase().includes(q.toLowerCase())||(p.numero||'').toLowerCase().includes(q.toLowerCase()));
+  if(cnt)cnt.textContent=fil.length+' proposta(s)';
+  if(!fil.length){
+    lista.innerHTML='<div style="text-align:center;padding:60px;color:var(--text3);">Nenhuma proposta encontrada.<br><small>Clique em "+ Nova Proposta" para começar.</small></div>';
+    return;
+  }
+  lista.innerHTML=fil.map(p=>{
+    const st=STATUS_MAP[p.status||'rascunho']||STATUS_MAP.rascunho;
+    const dataFmt=fd(p.data||p.timestamp||'');
+    return`<div class="prop-card" onclick="abrirEdicaoPropostaById(${p.id})" style="cursor:pointer;">
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:90px;">
+        <span class="prop-numero">${p.numero||'—'}</span>
+        <span class="vbadge" style="font-size:9px;width:fit-content;">${p.versao||'v1'}</span>
+      </div>
+      <div style="flex:1;">
+        <div class="prop-cliente">${eh(p.cliente||'—')}</div>
+        <div class="prop-meta">${dataFmt}</div>
+      </div>
+      <div onclick="event.stopPropagation()">
+        <select class="status-select ${st.cls}" onchange="updStatus(${p.id},this.value);this.className='status-select '+STATUS_MAP[this.value].cls;">
+          ${Object.entries(STATUS_MAP).map(([k,sv])=>`<option value="${k}" ${p.status===k?'selected':''}>${sv.emoji} ${sv.lbl}</option>`).join('')}
+        </select>
+      </div>
+      <div class="prop-valor">R$ ${fmt(p.total||0)}</div>
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();gerarPDFde(${p.id})" title="Gerar PDF">📄</button>
+      <button class="btn btn-danger btn-sm btn-icon" onclick="event.stopPropagation();deletarProposta(${p.id})" title="Excluir">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function deletarProposta(id){
+  const p=state.propostas.find(x=>x.id===id);
+  if(!p)return;
+  if(!confirm(`Excluir proposta ${p.numero}?\nEssa ação não pode ser desfeita.`))return;
+  state.propostas=state.propostas.filter(x=>x.id!==id);
+  registrarLog('excluiu',p.numero,p.cliente||'');
+  save();syncUp();renderPropostasList();
+}
+
+function abrirEdicaoProposta(){
+  document.getElementById('propostas-lista-view').style.display='none';
+  document.getElementById('propostas-edicao-view').style.display='block';
+  document.getElementById('prop-edicao-titulo').textContent='Nova Proposta';
+  document.getElementById('prop-edicao-versao').textContent='v1';
+  document.getElementById('prop-edicao-edit-badge').style.display='none';
+  // Mostrar a section-nova dentro da edicao-view (via CSS)
+  const secNova=document.getElementById('section-nova');
+  if(secNova){secNova.style.display='block';}
+  // Anexar section-nova ao container de edição
+  const container=document.getElementById('propostas-edicao-view');
+  if(secNova && !container.contains(secNova)){
+    container.appendChild(secNova);
+  }
+  // Ir para tab Dados
+  const firstTab=document.querySelector('#section-nova .tab');
+  if(firstTab && !firstTab.classList.contains('active'))firstTab.click();
+  // Ativar section-propostas
+  document.getElementById('section-propostas').classList.add('active');
+}
+
+function abrirEdicaoPropostaById(id){
+  const sec=document.getElementById('section-propostas');
+  sec.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>{if(s!==sec)s.classList.remove('active');});
+  document.getElementById('propostas-lista-view').style.display='none';
+  document.getElementById('propostas-edicao-view').style.display='block';
+  // Carregar dados da proposta
+  carregarProp(id);
+  // Atualizar cabeçalho da edição
+  const p=state.propostas.find(x=>x.id===id);
+  if(p){
+    document.getElementById('prop-edicao-titulo').textContent='PC-'+(p.campos?.numero||p.numero||'');
+    document.getElementById('prop-edicao-versao').textContent=p.versao||'v1';
+    document.getElementById('prop-edicao-edit-badge').style.display='inline';
+  }
+  // Garantir que as tabs do formulário funcionem
+  const firstTab=document.querySelector('#section-nova .tab');
+  if(firstTab && !firstTab.classList.contains('active')) firstTab.click();
+}
+
+function fecharEdicaoProposta(){
+  salvarProposta();
+  // Devolver section-nova ao seu lugar original no DOM (antes de section-dash)
+  const secNova=document.getElementById('section-nova');
+  const secDash=document.getElementById('section-dash');
+  if(secNova && secDash && secNova.parentElement!==secDash.parentElement){
+    secDash.parentElement.insertBefore(secNova, secDash);
+  }
+  if(secNova)secNova.style.display='';
+  document.getElementById('propostas-lista-view').style.display='block';
+  document.getElementById('propostas-edicao-view').style.display='none';
+  document.getElementById('section-propostas').classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>{if(s.id!=='section-propostas')s.classList.remove('active');});
+  document.querySelectorAll('.nav-it').forEach(b=>b.classList.remove('active'));
+  document.getElementById('nav-propostas-btn')?.classList.add('active');
+  document.getElementById('topbar-ttl').textContent='Propostas';
+  renderPropostasList();
+  _propEditandoId=null;
+}
+
+// ── Log de Histórico ─────────────────────────────────────────
+let _histLog=[];
+
+function registrarLog(acao, numero, cliente, extra=''){
+  const entry={ts:new Date().toISOString(),acao,numero,cliente,extra};
+  _histLog.unshift(entry);
+  if(_histLog.length>200)_histLog.pop();
+  try{localStorage.setItem('bd7d_log',JSON.stringify(_histLog));}catch(e){}
+}
+
+function renderHistLog(){
+  // Carregar log salvo
+  try{const s=localStorage.getItem('bd7d_log');if(s)_histLog=JSON.parse(s);}catch(e){}
+  const el=document.getElementById('hist-log-content');
+  const cnt=document.getElementById('hist-log-cnt');
+  if(!el)return;
+  if(!_histLog.length){
+    el.innerHTML='<div style="text-align:center;padding:60px;color:var(--text3);">Nenhuma atividade registrada ainda.</div>';
+    if(cnt)cnt.textContent='0 eventos';
+    return;
+  }
+  if(cnt)cnt.textContent=_histLog.length+' evento(s)';
+  const acaoLabel={
+    'criou':'✅ Criou','editou':'✏️ Editou','excluiu':'🗑️ Excluiu',
+    'salvou':'💾 Salvou','enviou':'☁️ Sincronizou','gerou_pdf':'📄 PDF gerado',
+    'status':'🔄 Status alterado'
+  };
+  el.innerHTML=_histLog.map(e=>{
+    const dt=new Date(e.ts);
+    const dtFmt=dt.toLocaleDateString('pt-BR')+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:11px;color:var(--text3);white-space:nowrap;min-width:110px;">${dtFmt}</span>
+      <span style="font-size:12px;font-weight:600;min-width:110px;">${acaoLabel[e.acao]||e.acao}</span>
+      <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--accent);min-width:90px;">${e.numero||''}</span>
+      <span style="font-size:12px;flex:1;">${e.cliente||''}</span>
+      ${e.extra?`<span style="font-size:11px;color:var(--text3);">${e.extra}</span>`:''}
+    </div>`;
+  }).join('');
 }
 
 function renderHist(q=''){
@@ -1406,13 +1548,17 @@ function carregarProp(id){
   const psel=document.getElementById('p-status');
   if(psel){psel.value=propStatusAtual;updStatusAtual(propStatusAtual);}
   renderItens();renderFrentes();
-  // Navegar para a tela de edição
-  document.querySelector('[onclick="goSec(\'nova\',this)"]').click();
-  // Atualizar título com número da proposta
-  atualizarTituloProposta(p.numero, p.versao);
-  // Marcar como proposta em edição
+  // Atualizar título
+  atualizarTituloProposta(p.numero||p.campos?.numero, p.versao);
   _propEditandoId = p.id;
   const eb=document.getElementById('prop-edit-badge');if(eb)eb.style.display='inline';
+  // Também atualizar cabeçalho da edição em section-propostas
+  const etitulo=document.getElementById('prop-edicao-titulo');
+  const eversao=document.getElementById('prop-edicao-versao');
+  const ebadge=document.getElementById('prop-edicao-edit-badge');
+  if(etitulo)etitulo.textContent='PC-'+(p.campos?.numero||p.numero||'');
+  if(eversao)eversao.textContent=p.versao||'v1';
+  if(ebadge)ebadge.style.display='inline';
 }
 
 // CATÁLOGO
@@ -1787,7 +1933,13 @@ function gerarPDF(){
   });
   execPDF(coletarD());
 }
-function gerarPDFde(id){const p=state.propostas.find(x=>x.id===id);if(p)execPDF(p.campos);}
+function gerarPDFde(id){
+  const p=state.propostas.find(x=>x.id===id);
+  if(!p)return;
+  const dados=p.campos||p;
+  execPDF(dados);
+  registrarLog('gerou_pdf',p.numero||dados.numero,p.cliente||dados.cliente||'');
+}
 function execPDF(d){
   const prev=document.getElementById('pdf-preview');prev.innerHTML=buildPDF(d);prev.style.display='block';
   // Definir título da página para nomear o PDF automaticamente
@@ -1819,4 +1971,41 @@ function fd(d){
 function ini(s){if(!s)return'?';const w=s.trim().split(' ');return(w[0][0]+(w.length>1?w[w.length-1][0]:'')).toUpperCase();}
 </script>
 </body>
-</html>
+</html<!-- PROPOSTAS -->
+  <section class="section" id="section-propostas">
+    <div id="propostas-lista-view">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span style="font-size:13px;color:var(--text2);" id="prop-lista-cnt">0 proposta(s)</span>
+          <select id="prop-lista-filter" onchange="renderPropostasList()" style="font-size:12px;padding:5px 8px;width:auto;">
+            <option value="">Todos os status</option>
+            <option value="rascunho">Rascunho</option>
+            <option value="aguardando">Aguardando Resposta</option>
+            <option value="aceita">Aceita</option>
+            <option value="declinada">Declinada</option>
+            <option value="faturada">Faturada</option>
+            <option value="aguard_pag">Aguardando Pagamento</option>
+            <option value="pago">Pago</option>
+          </select>
+          <input type="text" placeholder="Buscar..." style="width:200px;font-size:12px;" oninput="renderPropostasList(this.value)">
+        </div>
+        <button class="btn btn-primary" onclick="novaProposta();abrirEdicaoProposta()">+ Nova Proposta</button>
+      </div>
+      <div id="propostas-lista"></div>
+    </div>
+    <div id="propostas-edicao-view" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="fecharEdicaoProposta()">← Propostas</button>
+        <span style="font-size:16px;font-weight:600;font-family:'Fraunces',serif;color:var(--accent);" id="prop-edicao-titulo">Nova Proposta</span>
+        <span id="prop-edicao-versao" class="vbadge">v1</span>
+        <span id="prop-edicao-edit-badge" style="display:none;font-size:11px;font-weight:600;background:var(--blue-l);color:var(--blue);padding:2px 8px;border-radius:4px;">✏️ Editando</span>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+          <div id="sync-status-prop" style="font-size:11px;"></div>
+          <button class="btn btn-secondary btn-sm" onclick="gerarPDF()">📄 PDF</button>
+          <button class="btn btn-primary btn-sm" onclick="salvarProposta()">💾 Salvar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  >
