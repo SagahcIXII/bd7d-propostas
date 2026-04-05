@@ -1323,13 +1323,27 @@ function novaProposta(){
   if(psel2){psel2.value='rascunho';updStatusAtual('rascunho');}
 }
 function salvarProposta(){
-  // Garantir que valores dos inputs estão no array global antes de salvar
+  // Ler valores atuais dos inputs de ITENS antes de salvar
   document.querySelectorAll('#itens-tbody tr').forEach((tr,i)=>{
     if(!itens[i])return;
     const desc=tr.querySelector('input[placeholder="Descrição"]');
-    const qtd=tr.querySelector('input[type="number"]');
-    const custo=tr.querySelectorAll('input[type="number"]')[1];
     if(desc)itens[i].desc=desc.value;
+  });
+  // Ler valores atuais dos inputs de FRENTES antes de salvar
+  document.querySelectorAll('.frente-card').forEach((card,fi)=>{
+    if(!frentes[fi])return;
+    const nomeInput=card.querySelector('input[type="text"]');
+    if(nomeInput)frentes[fi].nome=nomeInput.value;
+    // Ler itens da frente
+    card.querySelectorAll('tbody tr').forEach((tr,ii)=>{
+      if(!frentes[fi].itens[ii])return;
+      const descEl=tr.querySelector('input[placeholder="Descrição"]')||tr.querySelector('input[type="text"]');
+      const qtdEl=tr.querySelector('input[type="number"]');
+      const custoEl=tr.querySelectorAll('input[type="number"]')[1];
+      if(descEl)frentes[fi].itens[ii].desc=descEl.value;
+      if(qtdEl)frentes[fi].itens[ii].qtd=parseFloat(qtdEl.value)||0;
+      if(custoEl)frentes[fi].itens[ii].custo=parseFloat(custoEl.value)||0;
+    });
   });
   const num='PC-'+v('p-num');const cli=v('c-razao')||'Cliente não informado';
   const tv=itens.reduce((s,it)=>s+(it.qtd||1)*it.vunit,0);
@@ -1502,18 +1516,37 @@ function abrirEdicaoProposta(){
   if(firstTab){firstTab.click();}
 }
 
-function abrirEdicaoPropostaById(id){
-  // Ao trocar de proposta, NÃO salvar automaticamente para não corromper dados
-  // (o usuário salva explicitamente com o botão Salvar)
+async function abrirEdicaoPropostaById(id){
+  // Buscar proposta fresca do banco (evita dados corrompidos do localStorage)
+  goSec('edicao', null);
+  setSyncStatus('syncing');
+  
+  try {
+    if(syncOk()){
+      // Baixar todas as propostas do banco e atualizar state
+      const r = await fetch(`${API_BASE}/api/sync`, {headers: authHeaders()});
+      if(r.ok){
+        const j = await r.json();
+        if(j.ok && j.data.propostas && j.data.propostas.length > 0){
+          state.propostas = j.data.propostas;
+          try{localStorage.setItem('bd7d_v3', JSON.stringify(state));}catch(e){}
+        }
+      }
+    }
+  } catch(e) {
+    console.warn('[abrirEdicao] Não foi possível atualizar do banco, usando dados locais:', e.message);
+  }
+  
+  setSyncStatus('ok', new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+  
   carregarProp(id);
-  const p=state.propostas.find(x=>x.id===id);
+  const p = state.propostas.find(x=>x.id===id);
   if(p){
-    const num=p.campos?.numero||p.numero||'';
+    const num = p.campos?.numero||p.numero||'';
     document.getElementById('prop-edicao-titulo').textContent='PC-'+num;
     document.getElementById('prop-edicao-versao').textContent=p.versao||'v1';
     document.getElementById('prop-edicao-edit-badge').style.display='inline';
   }
-  goSec('edicao', null);
   const firstTab=document.querySelector('#section-edicao .tab');
   if(firstTab){firstTab.click();}
 }
@@ -1643,7 +1676,17 @@ function carregarProp(id){
     vunit: Number(it.vunit)||0,
     lucro: Number(it.lucro)||0,
   }));
-  frentes = JSON.parse(JSON.stringify(frentesData));
+  // Normalizar frentes ao carregar
+  frentes = JSON.parse(JSON.stringify(frentesData)).map(fr=>({
+    nome: fr.nome||'Frente',
+    aberta: fr.aberta!==false,
+    itens: (fr.itens||[]).map(it=>({
+      desc: it.desc||'',
+      qtd: Number(it.qtd)||1,
+      unid: it.unid||'un',
+      custo: Number(it.custo)||0,
+    })),
+  }));
   if(c.checks){
     const map={hor:'ck-hor',alt:'ck-alt',civ:'ck-civ',ele:'ck-ele',con:'ck-con',art:'ck-art'};
     Object.entries(c.checks).forEach(([k,val])=>{const el=document.getElementById(map[k]);if(el){el.querySelector('input').checked=val;if(val){el.style.background='var(--accent-light)';el.style.borderColor='var(--accent2)';el.style.color='var(--accent)';}}});
