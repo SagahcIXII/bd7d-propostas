@@ -181,7 +181,7 @@ textarea{resize:vertical;min-height:60px;}
 #pdf-preview{
   display:none;
   font-family:Arial,Helvetica,sans-serif;
-  font-size:10.5pt;color:#1a1a1a;background:#fff;
+  font-size:10.5pt;color:#1a1a1a;background:#fff !important;
   padding:14mm 16mm 18mm;max-width:210mm;margin:0 auto;line-height:1.4;
   position:relative;
 }
@@ -192,7 +192,7 @@ textarea{resize:vertical;min-height:60px;}
 .pdf-logo-img{height:64px;display:flex;align-items:center;} .pdf-logo-img img{height:64px;width:auto;max-width:260px;display:block;object-fit:contain;object-position:left center;}
 .pdf-co h1{font-size:13.5pt;font-weight:700;color:#2c3340;margin-bottom:2px;}
 .pdf-co p{font-size:8.5pt;color:#555;margin:1px 0;}
-.pdf-prop-box{background:#2c3340;color:#fff;padding:10px 14px;border-radius:6px;text-align:right;min-width:145px;}
+.pdf-prop-box{background:#2c3340 !important;color:#fff !important;padding:10px 14px;border-radius:6px;text-align:right;min-width:145px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .pdf-prop-box .lbl{font-size:8pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
 .pdf-prop-box .num{font-size:14pt;font-weight:700;}
 .pdf-prop-box .meta{font-size:8pt;margin-top:4px;opacity:.85;}
@@ -201,15 +201,17 @@ textarea{resize:vertical;min-height:60px;}
 .pdf-id .blk p{margin:2px 0;}
 .pdf-sec{font-size:9.5pt;font-weight:700;color:#2c3340;text-transform:uppercase;letter-spacing:.06em;margin:12px 0 7px;padding-bottom:3px;border-bottom:1.5px solid #2c3340;}
 .pdf-intro{font-size:10pt;margin-bottom:9px;}
-.pdf-tbl{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:8px;}
-.pdf-tbl thead tr{background:#2c3340;color:#fff;}
+.pdf-tbl{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:8px;table-layout:fixed;}
+.pdf-tbl thead th:first-child,.pdf-tbl tbody td:first-child{width:52%;word-break:break-word;white-space:normal;}
+.pdf-tbl thead th:not(:first-child),.pdf-tbl tbody td:not(:first-child){white-space:nowrap;}
+.pdf-tbl thead tr{background:#2c3340 !important;color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .pdf-tbl thead th{padding:7px 8px;text-align:left;font-size:8.5pt;font-weight:600;letter-spacing:.04em;}
 .pdf-tbl thead th.r{text-align:right;}
 .pdf-tbl tbody tr{border-bottom:1px solid #e8e8e8;}
 .pdf-tbl tbody tr:nth-child(even){background:#f9f9f9;}
 .pdf-tbl tbody td{padding:7px 8px;}
 .pdf-tbl tbody td.r{text-align:right;}
-.pdf-tbl tfoot tr{background:#2c3340;color:#fff;}
+.pdf-tbl tfoot tr{background:#2c3340 !important;color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .pdf-tbl tfoot td{padding:8px 8px;font-weight:700;font-size:10pt;}
 .pdf-tbl tfoot td.r{text-align:right;}
 .pdf-g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0;}
@@ -219,13 +221,19 @@ textarea{resize:vertical;min-height:60px;}
 .pdf-assin{margin-top:40px;border-top:1px solid #000;width:220px;padding-top:6px;font-size:9pt;}
 @media print{
   body>*{display:none!important;}
-  #pdf-preview{display:block!important;padding:0;}
+  #pdf-preview{display:block!important;padding:0;background:#fff !important;color:#1a1a1a !important;}
+  /* Garantir que elementos com var() CSS da plataforma não vazem */
+  #pdf-preview *{box-sizing:border-box;}
   /* Marca d'água fixa em cada página */
   .pdf-wm-fixed{
     position:fixed !important;
     pointer-events:none;
     z-index:0;
   }
+  /* Remover qualquer box-shadow e border amarela */
+  #pdf-preview .int-badge,
+  #pdf-preview [style*="amber"],
+  #pdf-preview [style*="fcd34d"]{display:none !important;}
 }
 /* Garante que position:fixed repete em cada página no print */
 .pdf-wm-fixed{
@@ -1516,8 +1524,13 @@ function salvarCfg(){
   Object.entries(map).forEach(([k,cv])=>{const el=document.getElementById('cfg-'+k);if(el)state.config[cv]=el.value;});
   state.config.margem=parseFloat(v('cfg-marg'))||20;state.config.sn=parseFloat(v('cfg-sn'))||6;state.config.validade=parseInt(v('cfg-valid'))||30;
   // QR Code: já está em state.config.qrCode via carregarQR()
-  save();document.getElementById('i-marg').value=state.config.margem;document.getElementById('i-sn').value=state.config.sn;
-  alert('Configurações salvas!');
+  // Salvar local imediatamente
+  try{localStorage.setItem('bd7d_v3',JSON.stringify(state));}catch(e){}
+  document.getElementById('i-marg').value=state.config.margem;
+  document.getElementById('i-sn').value=state.config.sn;
+  // Enviar ao Neon imediatamente (sem debounce)
+  if(save._timer)clearTimeout(save._timer);
+  syncUp().then(()=>alert('Configurações salvas e sincronizadas!')).catch(()=>alert('Configurações salvas localmente.'));
 }
 
 // DASHBOARD
@@ -1654,7 +1667,7 @@ function buildPDF(d){
   const c=state.config;const tv=d.itens.reduce((s,it)=>s+(it.qtd||1)*it.vunit,0);
   const ext=numExt(tv);const ch=d.checks||{};
   const linhas=d.itens.map((it,i)=>{const sub=(it.qtd||1)*it.vunit;
-    return`<tr><td>${i+1}. ${eh(it.desc)||'—'}</td><td class="r">${Number(it.qtd).toLocaleString('pt-BR')} ${it.unid}</td><td class="r">R$ ${fmt(it.vunit)}</td><td class="r">R$ ${fmt(sub)}</td></tr>`;}).join('');
+    return`<tr><td style="word-break:break-word;white-space:normal;">${i+1}. ${eh(it.desc)||'—'}</td><td class="r" style="white-space:nowrap;">${Number(it.qtd).toLocaleString('pt-BR')} ${it.unid}</td><td class="r" style="white-space:nowrap;">R$ ${fmt(it.vunit)}</td><td class="r" style="white-space:nowrap;">R$ ${fmt(sub)}</td></tr>`;}).join('');
   const exl=[ch.hor?`<strong>Horário:</strong> ${d.horario}`:'',ch.alt?'<strong>Trab. em Altura:</strong> Sim':'',ch.civ?'<strong>Civil:</strong> Sim':'',ch.ele?'<strong>Eletricidade:</strong> Sim':'',ch.con?'<strong>Esp. Confinado:</strong> Sim':'',ch.art?'<strong>ART:</strong> Sim':''].filter(Boolean).join(' · ');
   return`
     ${(()=>{
