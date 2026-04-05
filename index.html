@@ -1304,12 +1304,11 @@ function renderCli(){
 
 // HISTÓRICO + STATUS
 function novaProposta(){
-  // Salvar proposta atual se existir
-  if(_propEditandoId !== null){
-    salvarProposta();
-  }
   itens=[];frentes=[];initItens();initFrentes();
   _propEditandoId=null;
+  // Ocultar botão "Carregar dados" pois é nova proposta
+  const btnRec=document.getElementById('btn-recarregar-prop');
+  if(btnRec)btnRec.style.display='none';
   atualizarTituloProposta('','v1');
   const eb2=document.getElementById('prop-edit-badge');if(eb2)eb2.style.display='none';
   document.getElementById('p-num').value=(new Date().getFullYear()+'-'+(state.propostas.length+1).toString().padStart(3,'0'));
@@ -1454,7 +1453,7 @@ function renderPropostasList(q=''){
     const versoes=versoesPor[p.numero||'']||[];
     const temVersoes=versoes.length>0;
     return`<div>
-      <div class="prop-card" onclick="abrirEdicaoPropostaById(${p.id})" style="cursor:pointer;">
+      <div class="prop-card" onclick="abrirEdicaoPropostaById(${parseInt(p.id)||p.id})" style="cursor:pointer;">
         <div style="display:flex;flex-direction:column;gap:2px;min-width:90px;">
           <span class="prop-numero">${p.numero||'—'}</span>
           <span class="vbadge" style="font-size:9px;width:fit-content;">${p.versao||'v1'}</span>
@@ -1475,7 +1474,7 @@ function renderPropostasList(q=''){
       </div>
       ${temVersoes?`<div id="versoes-${p.id}" style="display:none;margin-left:24px;border-left:2px solid var(--border);padding-left:12px;">
         ${versoes.map(v=>{const sv=STATUS_MAP[v.status||'rascunho']||STATUS_MAP.rascunho;return`
-          <div class="prop-card" onclick="abrirEdicaoPropostaById(${v.id})" style="cursor:pointer;background:var(--bg2);font-size:12px;padding:8px 12px;margin-bottom:4px;">
+          <div class="prop-card" onclick="abrirEdicaoPropostaById(${parseInt(v.id)||v.id})" style="cursor:pointer;background:var(--bg2);font-size:12px;padding:8px 12px;margin-bottom:4px;">
             <span class="vbadge" style="font-size:9px;">${v.versao||'v?'}</span>
             <span style="flex:1;font-size:11px;color:var(--text3);">${fd(v.data||v.timestamp||'')}</span>
             <span style="font-size:11px;font-weight:600;">R$ ${fmt(v.total||0)}</span>
@@ -1516,6 +1515,16 @@ function abrirEdicaoProposta(){
   if(firstTab){firstTab.click();}
 }
 
+
+function recarregarProposta(){
+  if(!_propEditandoId){alert('Nenhuma proposta selecionada.');return;}
+  const btn=document.getElementById('btn-recarregar-prop');
+  if(btn){btn.textContent='↻ Carregando...';btn.disabled=true;}
+  abrirEdicaoPropostaById(_propEditandoId).finally(()=>{
+    if(btn){btn.textContent='↻ Carregar dados';btn.disabled=false;}
+  });
+}
+
 async function abrirEdicaoPropostaById(id){
   // Buscar proposta fresca do banco (evita dados corrompidos do localStorage)
   goSec('edicao', null);
@@ -1539,8 +1548,10 @@ async function abrirEdicaoPropostaById(id){
   
   setSyncStatus('ok', new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
   
-  carregarProp(id);
-  const p = state.propostas.find(x=>x.id===id);
+  // Garantir que id é do tipo correto (banco retorna int, localStorage pode ter qualquer tipo)
+  const idNum = typeof id === 'string' ? parseInt(id) : id;
+  carregarProp(idNum);
+  const p = state.propostas.find(x=>String(x.id)===String(idNum));
   if(p){
     const num = p.campos?.numero||p.numero||'';
     document.getElementById('prop-edicao-titulo').textContent='PC-'+num;
@@ -1549,6 +1560,9 @@ async function abrirEdicaoPropostaById(id){
   }
   const firstTab=document.querySelector('#section-edicao .tab');
   if(firstTab){firstTab.click();}
+  // Mostrar botão carregar dados (pois há uma proposta em edição)
+  const btnRec=document.getElementById('btn-recarregar-prop');
+  if(btnRec)btnRec.style.display='inline-flex';
 }
 
 function fecharEdicaoProposta(){
@@ -1627,7 +1641,9 @@ function renderHist(q=''){
 }
 
 function carregarProp(id){
-  const p=state.propostas.find(x=>x.id===id);if(!p)return;
+  // Buscar proposta por id, com fallback por id como string (Neon retorna int, local pode ter string)
+  let p = state.propostas.find(x=>x.id===id || x.id===String(id) || String(x.id)===String(id));
+  if(!p){console.warn('[carregarProp] id não encontrado:', id, 'ids disponíveis:', state.propostas.map(x=>x.id)); return;}
   // Suportar tanto {campos:{...}} (localStorage) quanto objeto achatado do Neon
   const c=p.campos || p;
   const cli=c.cli||{razao:p.cliente||'',endereco:'',cnpj:'',cidade:'',uf:''};
