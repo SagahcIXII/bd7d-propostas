@@ -220,7 +220,18 @@ textarea{resize:vertical;min-height:60px;}
 @media print{
   body>*{display:none!important;}
   #pdf-preview{display:block!important;padding:0;}
-  /* .pdf-wm agora é gerado inline no buildPDF */
+  /* Marca d'água fixa em cada página */
+  .pdf-wm-fixed{
+    position:fixed !important;
+    pointer-events:none;
+    z-index:0;
+  }
+}
+/* Garante que position:fixed repete em cada página no print */
+.pdf-wm-fixed{
+  position:fixed;
+  pointer-events:none;
+  z-index:0;
 }
 
 .ck-lbl{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:6px 10px;cursor:pointer;font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;transition:all .15s;white-space:nowrap;}
@@ -1660,14 +1671,14 @@ function buildPDF(d){
         'center':'top:50%;left:50%;transform:translate(-50%,-50%);'
       }[pos]||'bottom:0;left:0;';
       if(!wmSrc) return '';
-      return '<div style="position:fixed;'+posStyle+'width:'+s+'px;height:'+s+'px;pointer-events:none;z-index:0;margin:0;padding:0;"><img src="'+wmSrc+'" style="width:'+s+'px;height:'+s+'px;object-fit:contain;opacity:'+op+';display:block;"></div>';
+      return '<div class="pdf-wm-fixed" style="'+posStyle+'width:'+s+'px;height:'+s+'px;pointer-events:none;z-index:0;margin:0;padding:0;"><img src="'+wmSrc+'" style="width:'+s+'px;height:'+s+'px;object-fit:contain;opacity:'+op+';display:block;"></div>';
     })()}
     <div class="pdf-hdr">
       <div class="pdf-logo-area">
         <div class="<div class="pdf-logo-img"><img src="${getLogoPDF()||'data:image/jpeg;base64,'+LOGO_B64}" alt="BD7D" style="height:64px;width:auto;max-width:260px;display:block;object-fit:contain;object-position:left center;"></div>
         <div class="pdf-co"><h1>${c.empresa}</h1><p>${c.endereco}</p><p>CNPJ: ${c.cnpj} &nbsp; CEP: ${c.cep}</p></div>
       </div>
-      <div class="pdf-prop-box"><div class="lbl">Proposta</div><div class="num">#PC-${d.numero}</div><div class="meta">Data: ${fd(d.data)}<br>Versão: ${d.versao||'v1'}</div></div>
+      <div class="pdf-prop-box"><div class="lbl">Proposta</div><div class="num">#PC-${d.numero}</div></div>
     </div>
     <div class="pdf-id">
       <div class="blk"><h4>Responsável</h4><p><strong>${c.responsavel}</strong></p><p>${c.telefone}</p><p>${c.email}</p></div>
@@ -1710,7 +1721,16 @@ function gerarPDF(){
 function gerarPDFde(id){const p=state.propostas.find(x=>x.id===id);if(p)execPDF(p.campos);}
 function execPDF(d){
   const prev=document.getElementById('pdf-preview');prev.innerHTML=buildPDF(d);prev.style.display='block';
-  setTimeout(()=>{window.print();setTimeout(()=>{prev.style.display='none';},800);},300);
+  // Definir título da página para nomear o PDF automaticamente
+  const num=d.numero||v('p-num')||'';
+  const ver=d.versao||v('p-ver')||'v1';
+  const cli=(d.cli?.razao||v('c-razao')||'').trim().substring(0,30);
+  const oldTitle=document.title;
+  document.title=`PC-${num}_${ver}${cli?' - '+cli:''}`;
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{prev.style.display='none';document.title=oldTitle;},800);
+  },300);
 }
 
 // UTILS
