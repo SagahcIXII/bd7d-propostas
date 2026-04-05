@@ -354,7 +354,7 @@ textarea{resize:vertical;min-height:60px;}
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:12px;">
       <button class="mobile-btn" onclick="toggleSB()">☰</button>
-      <span class="topbar-title" id="topbar-ttl">Nova Proposta</span>
+      <span class="topbar-title" id="topbar-ttl">Nova Proposta</span><span id="prop-edit-badge" style="display:none;font-size:11px;font-weight:600;background:var(--blue-l);color:var(--blue);padding:2px 8px;border-radius:4px;margin-left:6px;">✏️ Editando</span>
       <span id="prop-vbadge" class="vbadge" style="margin-left:4px;">v1</span>
     </div>
     <div class="topbar-actions" id="topbar-acts"><div id="sync-status" style="margin-right:4px;"><span class="sync-local">💾 Local</span></div>
@@ -380,7 +380,7 @@ textarea{resize:vertical;min-height:60px;}
       <div class="card">
         <div class="card-title">Identificação</div>
         <div class="fg">
-          <div class="fi"><label>Nº Proposta</label><div class="pfx"><span>PC-</span><input type="text" id="p-num" value="2025-001"></div></div>
+          <div class="fi"><label>Nº Proposta</label><div class="pfx"><span>PC-</span><input type="text" id="p-num" value="2025-001" oninput="atualizarTituloProposta(this.value,document.getElementById('p-ver').value)"></div></div>
           <div class="fi"><label>Data</label><input type="date" id="p-data"></div>
           <div class="fi"><label>Validade (dias)</label><input type="number" id="p-valid" value="30"></div>
           <div class="fi"><label>Versão</label><input type="text" id="p-ver" value="v1" readonly style="background:var(--bg2);"></div>
@@ -1257,6 +1257,9 @@ function renderCli(){
 // HISTÓRICO + STATUS
 function novaProposta(){
   itens=[];frentes=[];initItens();initFrentes();
+  _propEditandoId=null;
+  atualizarTituloProposta('','v1');
+  const eb2=document.getElementById('prop-edit-badge');if(eb2)eb2.style.display='none';
   document.getElementById('p-num').value=(new Date().getFullYear()+'-'+(state.propostas.length+1).toString().padStart(3,'0'));
   document.getElementById('p-ver').value='v1';document.getElementById('prop-vbadge').textContent='v1';
   setToday();
@@ -1286,6 +1289,7 @@ function salvarProposta(){
   const ex=state.propostas.find(p=>p.campos.numero===snap.campos.numero&&p.versao===ver);
   if(ex){const nv=incVer(ver);snap.versao=nv;snap.campos.versao=nv;document.getElementById('p-ver').value=nv;document.getElementById('prop-vbadge').textContent=nv;}
   state.propostas.unshift(snap);save();
+  atualizarTituloProposta('PC-'+v('p-num'),v('p-ver'));
   const btn=document.querySelector('#topbar-acts .btn-primary');const orig=btn.textContent;
   btn.textContent='✓ Salvo!';btn.style.background='#2d6a4f';
   setTimeout(()=>{btn.textContent=orig;btn.style.background='';},1500);
@@ -1303,6 +1307,17 @@ function updStatus(id,st){
       if(psel){psel.value=st;updStatusAtual(st);}
     }
   }
+}
+
+
+// Controle de proposta em edição
+let _propEditandoId = null;
+
+function atualizarTituloProposta(num, ver){
+  const ttl = document.getElementById('topbar-ttl');
+  const badge = document.getElementById('prop-vbadge');
+  if(ttl) ttl.textContent = num ? `PC-${num}` : 'Nova Proposta';
+  if(badge) badge.textContent = ver || 'v1';
 }
 
 function renderHist(q=''){
@@ -1356,7 +1371,13 @@ function carregarProp(id){
   const psel=document.getElementById('p-status');
   if(psel){psel.value=propStatusAtual;updStatusAtual(propStatusAtual);}
   renderItens();renderFrentes();
+  // Navegar para a tela de edição
   document.querySelector('[onclick="goSec(\'nova\',this)"]').click();
+  // Atualizar título com número da proposta
+  atualizarTituloProposta(p.numero, p.versao);
+  // Marcar como proposta em edição
+  _propEditandoId = p.id;
+  const eb=document.getElementById('prop-edit-badge');if(eb)eb.style.display='inline';
 }
 
 // CATÁLOGO
@@ -1752,7 +1773,14 @@ function ck(id){const el=document.getElementById(id);return el?el.querySelector(
 function eh(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmt(n){return(Number(n)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtK(n){if(n>=1000000)return(n/1000000).toFixed(1).replace('.',',')+'M';if(n>=1000)return(n/1000).toFixed(1).replace('.',',')+'k';return fmt(n);}
-function fd(d){if(!d)return'—';const[y,m,dy]=d.split('-');return`${dy}/${m}/${y}`;}
+function fd(d){
+  if(!d)return'—';
+  // Tratar tanto '2026-04-05' quanto '2026-04-05T00:00:00.000Z'
+  const dateOnly=(d.includes('T')?d.split('T')[0]:d);
+  const parts=dateOnly.split('-');
+  if(parts.length!==3)return d;
+  return`${parts[2]}/${parts[1]}/${parts[0]}`;
+}
 function ini(s){if(!s)return'?';const w=s.trim().split(' ');return(w[0][0]+(w.length>1?w[w.length-1][0]:'')).toUpperCase();}
 </script>
 </body>
