@@ -366,163 +366,6 @@ textarea{resize:vertical;min-height:60px;}
   <div class="content">
 
   <!-- NOVA PROPOSTA -->
-  <section class="section active" id="section-nova">
-    <div class="tabs">
-      <button class="tab active" onclick="goTab('dados',this)">Dados</button>
-      <button class="tab" onclick="goTab('itens',this)">Itens de Venda</button>
-      <button class="tab" onclick="goTab('custos',this)">Estudo de Custos</button>
-      <button class="tab" onclick="goTab('cond',this)">Condições</button>
-    </div>
-
-    <!-- TAB DADOS -->
-    <div class="tab-content active" id="tab-dados">
-      <div class="card">
-        <div class="card-title">Identificação</div>
-        <div class="fg">
-          <div class="fi"><label>Nº Proposta</label><div class="pfx"><span>PC-</span><input type="text" id="p-num" value="2025-001" oninput="atualizarTituloProposta(this.value,document.getElementById('p-ver').value)"></div></div>
-          <div class="fi"><label>Data</label><input type="date" id="p-data"></div>
-          <div class="fi"><label>Validade (dias)</label><input type="number" id="p-valid" value="30"></div>
-          <div class="fi"><label>Versão</label><input type="text" id="p-ver" value="v1" readonly style="background:var(--bg2);"></div>
-        </div>
-      </div>
-      <div class="card" style="border-left:4px solid var(--accent);">
-        <div class="card-title">Status da Proposta</div>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <div class="fi" style="flex:1;min-width:200px;">
-            <label>Status atual</label>
-            <select id="p-status" onchange="updStatusAtual(this.value)" style="font-size:13px;font-weight:500;">
-              <option value="rascunho">📝 Rascunho</option>
-              <option value="aguardando">⏳ Aguardando Resposta</option>
-              <option value="aceita">✅ Aceita</option>
-              <option value="declinada">❌ Declinada</option>
-              <option value="cancelada">🚫 Cancelada</option>
-              <option value="substituida">🔄 Substituída</option>
-              <option value="faturada">🧾 Faturada</option>
-              <option value="aguard_pag">💳 Aguardando Pagamento</option>
-              <option value="pago">💰 Pago</option>
-            </select>
-          </div>
-          <div id="status-indicator" style="padding:8px 16px;border-radius:var(--rsm);font-size:13px;font-weight:600;background:var(--bg2);color:var(--text2);">
-            📝 Rascunho
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Cliente</div>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <button class="btn btn-secondary btn-sm" onclick="abrirSel()">👤 Selecionar cadastrado</button>
-          <button class="btn btn-ghost btn-sm" onclick="limparCli()">Limpar</button>
-        </div>
-        <div class="fg">
-          <div class="fi fi-full"><label>Razão Social</label><input type="text" id="c-razao" placeholder="Nome ou empresa"></div>
-          <div class="fi fi-full"><label>Endereço</label><input type="text" id="c-end" placeholder="Av. Exemplo, 100"></div>
-          <div class="fi"><label>CNPJ / CPF</label><input type="text" id="c-cnpj" placeholder="00.000.000/0001-00"></div>
-          <div class="fi"><label>Cidade</label><input type="text" id="c-cid" placeholder="Manaus"></div>
-          <div class="fi"><label>UF</label><input type="text" id="c-uf" placeholder="AM" maxlength="2" style="max-width:80px;"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Licitação (opcional)</div>
-        <div class="fg2">
-          <div class="fi"><label>Nº Pregão</label><input type="text" id="l-pregao" placeholder="— não aplicável"></div>
-          <div class="fi"><label>Nº Processo</label><input type="text" id="l-proc" placeholder="— não aplicável"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB ITENS -->
-    <div class="tab-content" id="tab-itens" style="display:none;">
-      <div class="card" style="border-color:#fcd34d;background:#fffbeb;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span class="int-badge">🔒 RESUMO INTERNO — não aparece no PDF</span></div>
-        <div class="sum-bar" style="background:#fff8e1;border-color:#fcd34d;">
-          <div class="sum-it"><span class="sum-lbl">Custo Total</span><span class="sum-val mono" id="s-custo">R$ 0,00</span></div>
-          <div class="sum-div"></div>
-          <div class="sum-it"><span class="sum-lbl">Venda Total</span><span class="sum-val mono hi" id="s-venda">R$ 0,00</span></div>
-          <div class="sum-div"></div>
-          <div class="sum-it"><span class="sum-lbl">Lucro Líquido</span><span class="sum-val mono" id="s-lucro" style="color:var(--green);">R$ 0,00</span></div>
-          <div class="sum-div"></div>
-          <div class="sum-it"><span class="sum-lbl">Margem Real</span><span class="sum-val mono" id="s-mreal">0,0%</span></div>
-          <div class="sum-div"></div>
-          <div class="sum-it"><span class="sum-lbl">Imposto SN</span><span class="sum-val mono warn" id="s-imp">R$ 0,00</span></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Itens (preço calculado por item)</div>
-        <div class="items-wrap">
-          <table class="itbl">
-            <thead><tr>
-              <th style="width:26px;">#</th>
-              <th style="min-width:170px;">Descrição</th>
-              <th style="width:62px;">Qtde</th>
-              <th style="width:52px;">Unid.</th>
-              <th style="width:108px;">Custo Unit. 🔒</th>
-              <th style="width:70px;">Margem%</th>
-              <th style="width:60px;">SN%</th>
-              <th style="width:108px;">Preço Venda</th>
-              <th style="width:100px;">Lucro Líq. 🔒</th>
-              <th style="width:30px;"></th>
-            </tr></thead>
-            <tbody id="itens-tbody"></tbody>
-          </table>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="addItem()">+ Item</button>
-          <button class="btn btn-ghost btn-sm" onclick="importarCustos()">↑ Importar do estudo de custos</button>
-        </div>
-      </div>
-      <div class="calc-box">
-        <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Padrões (aplicados a novos itens)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
-          <div class="fi"><label>Margem padrão (%)</label><input type="number" id="i-marg" value="20" min="0" max="99" step="0.1"></div>
-          <div class="fi"><label>Simples Nacional (%)</label><input type="number" id="i-sn" value="6" min="0" max="33" step="0.01"></div>
-        </div>
-        <div style="font-size:11px;color:var(--text2);">Preço = Custo ÷ (1 − margem% − SN%) &nbsp;·&nbsp; Lucro = Preço − Custo − (Preço × SN%)</div>
-      </div>
-    </div>
-
-    <!-- TAB CUSTOS -->
-    <div class="tab-content" id="tab-custos" style="display:none;">
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <span class="int-badge">🔒 INTERNO — custos não vão para o PDF</span>
-          <button class="btn btn-secondary btn-sm" onclick="addFrente()">+ Nova frente</button>
-        </div>
-        <div id="frentes-c"></div>
-        <div class="calc-box" style="margin-top:0;">
-          <div class="calc-row"><span>Total de custos (todas as frentes)</span><span class="mono" id="c-tot">R$ 0,00</span></div>
-          <div class="calc-row tot"><span>Preço de venda sugerido</span><span class="mono" id="c-sug">R$ 0,00</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB CONDIÇÕES -->
-    <div class="tab-content" id="tab-cond" style="display:none;">
-      <div class="card"><div class="card-title">Observações</div>
-        <textarea id="o-obs" rows="3" placeholder="Informações adicionais..."></textarea>
-      </div>
-      <div class="card"><div class="card-title">Condições para Execução</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-          <label id="ck-hor" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-hor')"> Horário comercial</label>
-          <label id="ck-alt" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-alt')"> Trabalho em Altura</label>
-          <label id="ck-civ" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-civ')"> Civil</label>
-          <label id="ck-ele" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-ele')"> Eletricidade</label>
-          <label id="ck-con" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-con')"> Espaço Confinado</label>
-          <label id="ck-art" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-art')"> Emissão de ART</label>
-        </div>
-      </div>
-      <div class="fg2">
-        <div class="card"><div class="card-title">Prazo</div>
-          <div class="fi"><label>Dias úteis</label><input type="number" id="o-prazo" value="30"></div>
-          <div class="fi" style="margin-top:8px;"><label>Horário de trabalho</label><input type="text" id="o-hor" placeholder="07h–17h, Seg a Sex"></div>
-        </div>
-        <div class="card"><div class="card-title">Condições de Pagamento</div>
-          <textarea id="o-pag" rows="4" placeholder="Ex: 50% na assinatura, 50% na entrega..."></textarea>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- DASHBOARD -->
   <section class="section" id="section-dash">
     <div id="dash-content"></div>
   </section>
@@ -1008,9 +851,13 @@ function goSec(id,btn){
   }
 }
 function goTab(id,btn){
-  document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
-  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+id).style.display='block';
+  // Buscar tabs no mesmo container do botão clicado
+  const container=btn.closest('.section')||btn.closest('#propostas-edicao-view')||document;
+  container.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
+  container.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  // Buscar tab-content correto no mesmo container
+  const tabEl=container.querySelector('#tab-'+id) || document.getElementById('tab-'+id);
+  if(tabEl)tabEl.style.display='block';
   btn.classList.add('active');
   if(id==='itens')recalcSum();
   if(id==='custos')renderFrentes();
@@ -1388,54 +1235,36 @@ function abrirEdicaoProposta(){
   document.getElementById('prop-edicao-titulo').textContent='Nova Proposta';
   document.getElementById('prop-edicao-versao').textContent='v1';
   document.getElementById('prop-edicao-edit-badge').style.display='none';
-  // Mostrar a section-nova dentro da edicao-view (via CSS)
-  const secNova=document.getElementById('section-nova');
-  if(secNova){secNova.style.display='block';}
-  // Anexar section-nova ao container de edição
-  const container=document.getElementById('propostas-edicao-view');
-  if(secNova && !container.contains(secNova)){
-    container.appendChild(secNova);
-  }
-  // Ir para tab Dados
-  const firstTab=document.querySelector('#section-nova .tab');
-  if(firstTab && !firstTab.classList.contains('active'))firstTab.click();
-  // Ativar section-propostas
-  document.getElementById('section-propostas').classList.add('active');
+  // Ir para tab Dados dentro da section-propostas
+  const firstTab=document.querySelector('#propostas-edicao-view .tab');
+  if(firstTab){firstTab.click();}
 }
 
 function abrirEdicaoPropostaById(id){
-  const sec=document.getElementById('section-propostas');
-  sec.classList.add('active');
-  document.querySelectorAll('.section').forEach(s=>{if(s!==sec)s.classList.remove('active');});
+  // Mostrar section-propostas e vista de edição
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('section-propostas').classList.add('active');
   document.getElementById('propostas-lista-view').style.display='none';
   document.getElementById('propostas-edicao-view').style.display='block';
   // Carregar dados da proposta
   carregarProp(id);
-  // Atualizar cabeçalho da edição
+  // Atualizar cabeçalho
   const p=state.propostas.find(x=>x.id===id);
   if(p){
-    document.getElementById('prop-edicao-titulo').textContent='PC-'+(p.campos?.numero||p.numero||'');
+    const num=p.campos?.numero||p.numero||'';
+    document.getElementById('prop-edicao-titulo').textContent='PC-'+num;
     document.getElementById('prop-edicao-versao').textContent=p.versao||'v1';
     document.getElementById('prop-edicao-edit-badge').style.display='inline';
   }
-  // Garantir que as tabs do formulário funcionem
-  const firstTab=document.querySelector('#section-nova .tab');
-  if(firstTab && !firstTab.classList.contains('active')) firstTab.click();
+  // Ir para tab Dados dentro da section-propostas
+  const firstTab=document.querySelector('#propostas-edicao-view .tab');
+  if(firstTab){firstTab.click();}
 }
 
 function fecharEdicaoProposta(){
   salvarProposta();
-  // Devolver section-nova ao seu lugar original no DOM (antes de section-dash)
-  const secNova=document.getElementById('section-nova');
-  const secDash=document.getElementById('section-dash');
-  if(secNova && secDash && secNova.parentElement!==secDash.parentElement){
-    secDash.parentElement.insertBefore(secNova, secDash);
-  }
-  if(secNova)secNova.style.display='';
   document.getElementById('propostas-lista-view').style.display='block';
   document.getElementById('propostas-edicao-view').style.display='none';
-  document.getElementById('section-propostas').classList.add('active');
-  document.querySelectorAll('.section').forEach(s=>{if(s.id!=='section-propostas')s.classList.remove('active');});
   document.querySelectorAll('.nav-it').forEach(b=>b.classList.remove('active'));
   document.getElementById('nav-propostas-btn')?.classList.add('active');
   document.getElementById('topbar-ttl').textContent='Propostas';
@@ -1973,6 +1802,7 @@ function ini(s){if(!s)return'?';const w=s.trim().split(' ');return(w[0][0]+(w.le
 </body>
 </html<!-- PROPOSTAS -->
   <section class="section" id="section-propostas">
+    <!-- Vista: Lista de Propostas -->
     <div id="propostas-lista-view">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -1993,19 +1823,178 @@ function ini(s){if(!s)return'?';const w=s.trim().split(' ');return(w[0][0]+(w.le
       </div>
       <div id="propostas-lista"></div>
     </div>
+
+    <!-- Vista: Edição de Proposta -->
     <div id="propostas-edicao-view" style="display:none;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <!-- Cabeçalho da edição -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--border);">
         <button class="btn btn-secondary btn-sm" onclick="fecharEdicaoProposta()">← Propostas</button>
         <span style="font-size:16px;font-weight:600;font-family:'Fraunces',serif;color:var(--accent);" id="prop-edicao-titulo">Nova Proposta</span>
         <span id="prop-edicao-versao" class="vbadge">v1</span>
         <span id="prop-edicao-edit-badge" style="display:none;font-size:11px;font-weight:600;background:var(--blue-l);color:var(--blue);padding:2px 8px;border-radius:4px;">✏️ Editando</span>
         <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-          <div id="sync-status-prop" style="font-size:11px;"></div>
           <button class="btn btn-secondary btn-sm" onclick="gerarPDF()">📄 PDF</button>
           <button class="btn btn-primary btn-sm" onclick="salvarProposta()">💾 Salvar</button>
         </div>
       </div>
+      <!-- Formulário completo (mesmo conteúdo da section-nova) -->
+      
+    <div class="tabs">
+      <button class="tab active" onclick="goTab('dados',this)">Dados</button>
+      <button class="tab" onclick="goTab('itens',this)">Itens de Venda</button>
+      <button class="tab" onclick="goTab('custos',this)">Estudo de Custos</button>
+      <button class="tab" onclick="goTab('cond',this)">Condições</button>
+    </div>
+
+    <!-- TAB DADOS -->
+    <div class="tab-content active" id="tab-dados">
+      <div class="card">
+        <div class="card-title">Identificação</div>
+        <div class="fg">
+          <div class="fi"><label>Nº Proposta</label><div class="pfx"><span>PC-</span><input type="text" id="p-num" value="2025-001" oninput="atualizarTituloProposta(this.value,document.getElementById('p-ver').value)"></div></div>
+          <div class="fi"><label>Data</label><input type="date" id="p-data"></div>
+          <div class="fi"><label>Validade (dias)</label><input type="number" id="p-valid" value="30"></div>
+          <div class="fi"><label>Versão</label><input type="text" id="p-ver" value="v1" readonly style="background:var(--bg2);"></div>
+        </div>
+      </div>
+      <div class="card" style="border-left:4px solid var(--accent);">
+        <div class="card-title">Status da Proposta</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div class="fi" style="flex:1;min-width:200px;">
+            <label>Status atual</label>
+            <select id="p-status" onchange="updStatusAtual(this.value)" style="font-size:13px;font-weight:500;">
+              <option value="rascunho">📝 Rascunho</option>
+              <option value="aguardando">⏳ Aguardando Resposta</option>
+              <option value="aceita">✅ Aceita</option>
+              <option value="declinada">❌ Declinada</option>
+              <option value="cancelada">🚫 Cancelada</option>
+              <option value="substituida">🔄 Substituída</option>
+              <option value="faturada">🧾 Faturada</option>
+              <option value="aguard_pag">💳 Aguardando Pagamento</option>
+              <option value="pago">💰 Pago</option>
+            </select>
+          </div>
+          <div id="status-indicator" style="padding:8px 16px;border-radius:var(--rsm);font-size:13px;font-weight:600;background:var(--bg2);color:var(--text2);">
+            📝 Rascunho
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Cliente</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button class="btn btn-secondary btn-sm" onclick="abrirSel()">👤 Selecionar cadastrado</button>
+          <button class="btn btn-ghost btn-sm" onclick="limparCli()">Limpar</button>
+        </div>
+        <div class="fg">
+          <div class="fi fi-full"><label>Razão Social</label><input type="text" id="c-razao" placeholder="Nome ou empresa"></div>
+          <div class="fi fi-full"><label>Endereço</label><input type="text" id="c-end" placeholder="Av. Exemplo, 100"></div>
+          <div class="fi"><label>CNPJ / CPF</label><input type="text" id="c-cnpj" placeholder="00.000.000/0001-00"></div>
+          <div class="fi"><label>Cidade</label><input type="text" id="c-cid" placeholder="Manaus"></div>
+          <div class="fi"><label>UF</label><input type="text" id="c-uf" placeholder="AM" maxlength="2" style="max-width:80px;"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Licitação (opcional)</div>
+        <div class="fg2">
+          <div class="fi"><label>Nº Pregão</label><input type="text" id="l-pregao" placeholder="— não aplicável"></div>
+          <div class="fi"><label>Nº Processo</label><input type="text" id="l-proc" placeholder="— não aplicável"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB ITENS -->
+    <div class="tab-content" id="tab-itens" style="display:none;">
+      <div class="card" style="border-color:#fcd34d;background:#fffbeb;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span class="int-badge">🔒 RESUMO INTERNO — não aparece no PDF</span></div>
+        <div class="sum-bar" style="background:#fff8e1;border-color:#fcd34d;">
+          <div class="sum-it"><span class="sum-lbl">Custo Total</span><span class="sum-val mono" id="s-custo">R$ 0,00</span></div>
+          <div class="sum-div"></div>
+          <div class="sum-it"><span class="sum-lbl">Venda Total</span><span class="sum-val mono hi" id="s-venda">R$ 0,00</span></div>
+          <div class="sum-div"></div>
+          <div class="sum-it"><span class="sum-lbl">Lucro Líquido</span><span class="sum-val mono" id="s-lucro" style="color:var(--green);">R$ 0,00</span></div>
+          <div class="sum-div"></div>
+          <div class="sum-it"><span class="sum-lbl">Margem Real</span><span class="sum-val mono" id="s-mreal">0,0%</span></div>
+          <div class="sum-div"></div>
+          <div class="sum-it"><span class="sum-lbl">Imposto SN</span><span class="sum-val mono warn" id="s-imp">R$ 0,00</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Itens (preço calculado por item)</div>
+        <div class="items-wrap">
+          <table class="itbl">
+            <thead><tr>
+              <th style="width:26px;">#</th>
+              <th style="min-width:170px;">Descrição</th>
+              <th style="width:62px;">Qtde</th>
+              <th style="width:52px;">Unid.</th>
+              <th style="width:108px;">Custo Unit. 🔒</th>
+              <th style="width:70px;">Margem%</th>
+              <th style="width:60px;">SN%</th>
+              <th style="width:108px;">Preço Venda</th>
+              <th style="width:100px;">Lucro Líq. 🔒</th>
+              <th style="width:30px;"></th>
+            </tr></thead>
+            <tbody id="itens-tbody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="addItem()">+ Item</button>
+          <button class="btn btn-ghost btn-sm" onclick="importarCustos()">↑ Importar do estudo de custos</button>
+        </div>
+      </div>
+      <div class="calc-box">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Padrões (aplicados a novos itens)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
+          <div class="fi"><label>Margem padrão (%)</label><input type="number" id="i-marg" value="20" min="0" max="99" step="0.1"></div>
+          <div class="fi"><label>Simples Nacional (%)</label><input type="number" id="i-sn" value="6" min="0" max="33" step="0.01"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);">Preço = Custo ÷ (1 − margem% − SN%) &nbsp;·&nbsp; Lucro = Preço − Custo − (Preço × SN%)</div>
+      </div>
+    </div>
+
+    <!-- TAB CUSTOS -->
+    <div class="tab-content" id="tab-custos" style="display:none;">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <span class="int-badge">🔒 INTERNO — custos não vão para o PDF</span>
+          <button class="btn btn-secondary btn-sm" onclick="addFrente()">+ Nova frente</button>
+        </div>
+        <div id="frentes-c"></div>
+        <div class="calc-box" style="margin-top:0;">
+          <div class="calc-row"><span>Total de custos (todas as frentes)</span><span class="mono" id="c-tot">R$ 0,00</span></div>
+          <div class="calc-row tot"><span>Preço de venda sugerido</span><span class="mono" id="c-sug">R$ 0,00</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB CONDIÇÕES -->
+    <div class="tab-content" id="tab-cond" style="display:none;">
+      <div class="card"><div class="card-title">Observações</div>
+        <textarea id="o-obs" rows="3" placeholder="Informações adicionais..."></textarea>
+      </div>
+      <div class="card"><div class="card-title">Condições para Execução</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <label id="ck-hor" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-hor')"> Horário comercial</label>
+          <label id="ck-alt" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-alt')"> Trabalho em Altura</label>
+          <label id="ck-civ" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-civ')"> Civil</label>
+          <label id="ck-ele" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-ele')"> Eletricidade</label>
+          <label id="ck-con" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-con')"> Espaço Confinado</label>
+          <label id="ck-art" class="ck-lbl"><input type="checkbox" onchange="updCk(this,'ck-art')"> Emissão de ART</label>
+        </div>
+      </div>
+      <div class="fg2">
+        <div class="card"><div class="card-title">Prazo</div>
+          <div class="fi"><label>Dias úteis</label><input type="number" id="o-prazo" value="30"></div>
+          <div class="fi" style="margin-top:8px;"><label>Horário de trabalho</label><input type="text" id="o-hor" placeholder="07h–17h, Seg a Sex"></div>
+        </div>
+        <div class="card"><div class="card-title">Condições de Pagamento</div>
+          <textarea id="o-pag" rows="4" placeholder="Ex: 50% na assinatura, 50% na entrega..."></textarea>
+        </div>
+      </div>
+    </div>
+  
     </div>
   </section>
 
-  >
+</div>
+</div>
