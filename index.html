@@ -964,11 +964,12 @@ async function syncDown(){
     const j=await r.json();
     if(!j.ok)throw new Error(j.error);
     const d=j.data;
-    // Só sobrescreve se o Neon tiver dados (evita apagar dados locais com banco vazio)
-    if(d.propostas && d.propostas.length > 0) state.propostas=d.propostas;
-    else if(d.propostas && d.propostas.length === 0 && state.propostas.length > 0){
-      // Neon vazio mas temos dados locais → fazer upload automático
-      console.log('Neon vazio, enviando dados locais...');
+    // Sincronização inteligente: banco tem precedência se tem dados
+    if(d.propostas && d.propostas.length > 0){
+      state.propostas=d.propostas;
+      console.log('[syncDown] Carregado',d.propostas.length,'propostas do banco');
+    } else if(d.propostas && d.propostas.length === 0 && state.propostas.length > 0){
+      console.log('[syncDown] Banco vazio, enviando dados locais...');
       setTimeout(syncUp, 500);
     }
     if(d.clientes && d.clientes.length > 0) state.clientes=d.clientes;
@@ -1798,6 +1799,46 @@ function syncIdentidadeVisual(){
   if(opEl)opEl.value=wmc.opacity||12;
 }
 
+
+function forcaDownloadBanco(){
+  if(!syncOk()){alert('Sem conexão com o banco. Faça login primeiro.');return;}
+  if(!confirm('⚠️ Isso vai DESCARTAR todos os dados locais e carregar exatamente o que está no banco Neon.\n\nDeseja continuar?'))return;
+  
+  // Limpar localStorage completamente
+  localStorage.removeItem('bd7d_v3');
+  localStorage.removeItem('bd7d_v3_backup');
+  
+  // Resetar state para valores padrão
+  state.propostas=[];
+  state.clientes=[];
+  state.catalogo=[];
+  
+  setSyncStatus('syncing');
+  
+  // Baixar tudo do banco sem verificação de dados locais
+  fetch(`${API_BASE}/api/sync`,{headers:authHeaders()})
+    .then(r=>{
+      if(r.status===401){clearToken();mostrarLogin();return;}
+      return r.json();
+    })
+    .then(j=>{
+      if(!j||!j.ok)throw new Error(j?.error||'Erro ao baixar');
+      const d=j.data;
+      if(d.propostas) state.propostas=d.propostas;
+      if(d.clientes) state.clientes=d.clientes;
+      if(d.catalogo) state.catalogo=d.catalogo;
+      if(d.config && Object.keys(d.config).length) state.config={...state.config,...d.config};
+      // Salvar no localStorage
+      try{localStorage.setItem('bd7d_v3',JSON.stringify(state));}catch(e){}
+      setSyncStatus('ok', new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+      renderPropostasList();renderCli();renderCat();applyCfg();
+      alert(`✅ Dados carregados do banco!\n${state.propostas.length} proposta(s) | ${state.clientes.length} cliente(s)`);
+    })
+    .catch(e=>{
+      setSyncStatus('error', e.message);
+      alert('Erro ao baixar do banco: '+e.message);
+    });
+}
 
 function recuperarDadosLocais(){
   // Tenta ler um backup do localStorage antes da última sync
