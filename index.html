@@ -332,8 +332,13 @@ textarea{resize:vertical;min-height:60px;}
     </div>
   </div>
   <div class="sb-nav">
+    <div style="padding:10px 8px 6px;">
+      <button class="btn btn-primary" style="width:100%;justify-content:center;gap:6px;padding:9px 16px;" onclick="novaProposta();goSec('nova',document.getElementById('nav-nova-btn'))">
+        <span style="font-size:16px;line-height:1;">+</span> Nova Proposta
+      </button>
+    </div>
     <div class="nav-lbl">Principal</div>
-    <button class="nav-it active" onclick="goSec('nova',this)"><span class="ic">✦</span> Nova Proposta</button>
+    <button class="nav-it" id="nav-nova-btn" onclick="goSec('nova',this)" style="display:none;"></button>
     <button class="nav-it" onclick="goSec('dash',this)"><span class="ic">◈</span> Dashboard</button>
     <button class="nav-it" onclick="goSec('hist',this)"><span class="ic">≡</span> Histórico</button>
     <div class="nav-lbl" style="margin-top:12px;">Cadastros</div>
@@ -1002,7 +1007,7 @@ function goSec(id,btn){
   document.querySelectorAll('.nav-it').forEach(b=>b.classList.remove('active'));
   document.getElementById('section-'+id).classList.add('active');
   btn.classList.add('active');
-  const ttls={nova:'Nova Proposta',dash:'Dashboard',hist:'Histórico',clientes:'Clientes',catalogo:'Catálogo',config:'Configurações'};
+  const ttls={nova:'Proposta',dash:'Dashboard',hist:'Histórico',clientes:'Clientes',catalogo:'Catálogo',config:'Configurações'};
   document.getElementById('topbar-ttl').textContent=ttls[id]||'';
   document.getElementById('topbar-acts').style.display=id==='nova'?'flex':'none';
   document.getElementById('prop-vbadge').style.display=id==='nova'?'':'none';
@@ -1286,9 +1291,25 @@ function salvarProposta(){
       checks:{hor:ck('ck-hor'),alt:ck('ck-alt'),civ:ck('ck-civ'),ele:ck('ck-ele'),con:ck('ck-con'),art:ck('ck-art')}
     }
   };
-  const ex=state.propostas.find(p=>p.campos.numero===snap.campos.numero&&p.versao===ver);
-  if(ex){const nv=incVer(ver);snap.versao=nv;snap.campos.versao=nv;document.getElementById('p-ver').value=nv;document.getElementById('prop-vbadge').textContent=nv;}
-  state.propostas.unshift(snap);save();
+  // Se está editando uma proposta existente, atualizar em vez de criar nova
+  if(_propEditandoId !== null){
+    const idx=state.propostas.findIndex(p=>p.id===_propEditandoId);
+    if(idx>=0){
+      snap.id=_propEditandoId;
+      state.propostas[idx]=snap;
+    } else {
+      state.propostas.unshift(snap);
+    }
+  } else {
+    // Nova proposta: verificar se já existe com mesmo número/versão
+    const ex=state.propostas.find(p=>(p.campos?.numero||p.numero)===snap.campos.numero&&(p.versao)===ver);
+    if(ex){const nv=incVer(ver);snap.versao=nv;snap.campos.versao=nv;document.getElementById('p-ver').value=nv;document.getElementById('prop-vbadge').textContent=nv;}
+    state.propostas.unshift(snap);
+  }
+  // Salvar local e enviar para Neon imediatamente
+  try{localStorage.setItem('bd7d_v3',JSON.stringify(state));}catch(e){}
+  if(save._timer)clearTimeout(save._timer);
+  syncUp();
   atualizarTituloProposta('PC-'+v('p-num'),v('p-ver'));
   const btn=document.querySelector('#topbar-acts .btn-primary');const orig=btn.textContent;
   btn.textContent='✓ Salvo!';btn.style.background='#2d6a4f';
@@ -1325,7 +1346,7 @@ function renderHist(q=''){
   if(!lista)return;
   const stFil=document.getElementById('hist-filter-status')?.value||'';
   const qStr=typeof q==='string'?q:(document.getElementById('hist-lista')?q:'');
-  let fil=state.propostas;
+  let fil=[...state.propostas].sort((a,b)=>new Date(b.timestamp||b.atualizado_em||0)-new Date(a.timestamp||a.atualizado_em||0));
   if(stFil)fil=fil.filter(p=>p.status===stFil);
   if(q&&typeof q==='string'&&q.length)fil=fil.filter(p=>p.cliente.toLowerCase().includes(q.toLowerCase())||p.numero.toLowerCase().includes(q.toLowerCase()));
   cnt.textContent=fil.length+' proposta(s)';
@@ -1351,17 +1372,31 @@ function renderHist(q=''){
 }
 
 function carregarProp(id){
-  const p=state.propostas.find(x=>x.id===id);if(!p)return;const c=p.campos;
-  document.getElementById('p-num').value=c.numero;document.getElementById('p-data').value=c.data;
-  document.getElementById('p-ver').value=p.versao;document.getElementById('prop-vbadge').textContent=p.versao;
-  document.getElementById('p-valid').value=c.validade;
-  document.getElementById('c-razao').value=c.cli.razao;document.getElementById('c-end').value=c.cli.endereco;
-  document.getElementById('c-cnpj').value=c.cli.cnpj;document.getElementById('c-cid').value=c.cli.cidade;document.getElementById('c-uf').value=c.cli.uf;
-  document.getElementById('l-pregao').value=c.lic.pregao;document.getElementById('l-proc').value=c.lic.processo;
-  document.getElementById('i-marg').value=c.margem;document.getElementById('i-sn').value=c.sn;
-  document.getElementById('o-obs').value=c.obs;document.getElementById('o-prazo').value=c.prazo;
-  document.getElementById('o-hor').value=c.horario;document.getElementById('o-pag').value=c.pagamento;
-  itens=JSON.parse(JSON.stringify(c.itens));frentes=JSON.parse(JSON.stringify(c.frentes||[]));
+  const p=state.propostas.find(x=>x.id===id);if(!p)return;
+  // Suportar tanto {campos:{...}} (localStorage) quanto objeto achatado do Neon
+  const c=p.campos || p;
+  const cli=c.cli||{razao:p.cliente||'',endereco:'',cnpj:'',cidade:'',uf:''};
+  const lic=c.lic||{pregao:'',processo:''};
+  document.getElementById('p-num').value=c.numero||p.numero||'';
+  document.getElementById('p-data').value=(c.data||p.data||'').split('T')[0];
+  document.getElementById('p-ver').value=p.versao||c.versao||'v1';
+  document.getElementById('prop-vbadge').textContent=p.versao||c.versao||'v1';
+  document.getElementById('p-valid').value=c.validade||30;
+  document.getElementById('c-razao').value=cli.razao||'';
+  document.getElementById('c-end').value=cli.endereco||'';
+  document.getElementById('c-cnpj').value=cli.cnpj||'';
+  document.getElementById('c-cid').value=cli.cidade||'';
+  document.getElementById('c-uf').value=cli.uf||'';
+  document.getElementById('l-pregao').value=lic.pregao||'';
+  document.getElementById('l-proc').value=lic.processo||'';
+  document.getElementById('i-marg').value=c.margem||state.config.margem||20;
+  document.getElementById('i-sn').value=c.sn||state.config.sn||6;
+  document.getElementById('o-obs').value=c.obs||'';
+  document.getElementById('o-prazo').value=c.prazo||30;
+  document.getElementById('o-hor').value=c.horario||'';
+  document.getElementById('o-pag').value=c.pagamento||'';
+  itens=JSON.parse(JSON.stringify(c.itens||[]));
+  frentes=JSON.parse(JSON.stringify(c.frentes||[]));
   if(c.checks){
     const map={hor:'ck-hor',alt:'ck-alt',civ:'ck-civ',ele:'ck-ele',con:'ck-con',art:'ck-art'};
     Object.entries(c.checks).forEach(([k,val])=>{const el=document.getElementById(map[k]);if(el){el.querySelector('input').checked=val;if(val){el.style.background='var(--accent-light)';el.style.borderColor='var(--accent2)';el.style.color='var(--accent)';}}});
