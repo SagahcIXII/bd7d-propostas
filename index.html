@@ -1108,7 +1108,7 @@ function criarLinhaItem(it,i){
     <td><input type="text" value="${eh(it.desc)}" placeholder="Descrição" oninput="itens[${i}].desc=this.value" style="min-width:150px;width:100%;"></td>
     <td><input type="number" value="${it.qtd}" min="0" step="0.01" onchange="calcItem(${i},'qtd',parseFloat(this.value)||0)" oninput="itens[${i}].qtd=parseFloat(this.value)||0;recalcSum()" style="width:55px;text-align:right;"></td>
     <td><input type="text" value="${eh(it.unid)}" oninput="itens[${i}].unid=this.value" style="width:46px;text-align:center;"></td>
-    <td><div class="pfx" style="border-color:#fcd34d;"><span style="background:#fffbeb;font-size:11px;">R$</span><input type="number" value="${it.custo.toFixed(2)}" min="0" step="0.01" onchange="calcItem(${i},'custo',parseFloat(this.value)||0)" oninput="itens[${i}].custo=parseFloat(this.value)||0" style="text-align:right;width:72px;"></div></td>
+    <td><div class="pfx" style="border-color:#fcd34d;"><span style="background:#fffbeb;font-size:11px;">R$</span><input type="number" value="${(it.custo||0).toFixed(2)}" min="0" step="0.01" onchange="calcItem(${i},'custo',parseFloat(this.value)||0)" oninput="itens[${i}].custo=parseFloat(this.value)||0" style="text-align:right;width:72px;"></div></td>
     <td><input type="number" value="${it.margem}" min="0" max="99" step="0.1" onchange="calcItem(${i},'margem',parseFloat(this.value)||0)" oninput="itens[${i}].margem=parseFloat(this.value)||0" style="width:58px;text-align:right;font-family:'DM Mono',monospace;"></td>
     <td><input type="number" value="${it.sn}" min="0" max="33" step="0.01" onchange="calcItem(${i},'sn',parseFloat(this.value)||0)" oninput="itens[${i}].sn=parseFloat(this.value)||0" style="width:52px;text-align:right;font-family:'DM Mono',monospace;"></td>
     <td class="res-vunit" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);font-weight:600;white-space:nowrap;">R$ ${fmt(it.vunit)}</td>
@@ -1322,6 +1322,14 @@ function novaProposta(){
   if(psel2){psel2.value='rascunho';updStatusAtual('rascunho');}
 }
 function salvarProposta(){
+  // Garantir que valores dos inputs estão no array global antes de salvar
+  document.querySelectorAll('#itens-tbody tr').forEach((tr,i)=>{
+    if(!itens[i])return;
+    const desc=tr.querySelector('input[placeholder="Descrição"]');
+    const qtd=tr.querySelector('input[type="number"]');
+    const custo=tr.querySelectorAll('input[type="number"]')[1];
+    if(desc)itens[i].desc=desc.value;
+  });
   const num='PC-'+v('p-num');const cli=v('c-razao')||'Cliente não informado';
   const tv=itens.reduce((s,it)=>s+(it.qtd||1)*it.vunit,0);
   const tl=itens.reduce((s,it)=>s+(it.qtd||1)*it.lucro,0);
@@ -1494,10 +1502,8 @@ function abrirEdicaoProposta(){
 }
 
 function abrirEdicaoPropostaById(id){
-  // Se há uma proposta aberta, salvar antes de trocar
-  if(_propEditandoId !== null && _propEditandoId !== id){
-    salvarProposta();
-  }
+  // Ao trocar de proposta, NÃO salvar automaticamente para não corromper dados
+  // (o usuário salva explicitamente com o botão Salvar)
   carregarProp(id);
   const p=state.propostas.find(x=>x.id===id);
   if(p){
@@ -1512,7 +1518,6 @@ function abrirEdicaoPropostaById(id){
 }
 
 function fecharEdicaoProposta(){
-  salvarProposta();
   _propEditandoId=null;
   goSec('propostas', document.getElementById('nav-propostas-btn'));
 }
@@ -1614,10 +1619,20 @@ function carregarProp(id){
   // Reset itens ANTES de carregar para garantir que não vaza da proposta anterior
   itens=[];frentes=[];
   // Carregar itens da proposta (suporta tanto campos.itens quanto p.itens do Neon)
-  const itensData = c.itens || (p.campos_json && JSON.parse(p.campos_json||'{}').itens) || [];
+  const itensData = c.itens || [];
   const frentesData = c.frentes || [];
-  itens=JSON.parse(JSON.stringify(itensData));
-  frentes=JSON.parse(JSON.stringify(frentesData));
+  // Normalizar cada item garantindo todos os campos necessários
+  itens = JSON.parse(JSON.stringify(itensData)).map(it=>({
+    desc: it.desc||'',
+    qtd: Number(it.qtd)||1,
+    unid: it.unid||'un',
+    custo: Number(it.custo)||0,
+    margem: Number(it.margem)||20,
+    sn: Number(it.sn)||6,
+    vunit: Number(it.vunit)||0,
+    lucro: Number(it.lucro)||0,
+  }));
+  frentes = JSON.parse(JSON.stringify(frentesData));
   if(c.checks){
     const map={hor:'ck-hor',alt:'ck-alt',civ:'ck-civ',ele:'ck-ele',con:'ck-con',art:'ck-art'};
     Object.entries(c.checks).forEach(([k,val])=>{const el=document.getElementById(map[k]);if(el){el.querySelector('input').checked=val;if(val){el.style.background='var(--accent-light)';el.style.borderColor='var(--accent2)';el.style.color='var(--accent)';}}});
@@ -1626,6 +1641,14 @@ function carregarProp(id){
   propStatusAtual=p.status||'rascunho';
   const psel=document.getElementById('p-status');
   if(psel){psel.value=propStatusAtual;updStatusAtual(propStatusAtual);}
+  // Recalcular vunit de cada item a partir do custo salvo
+  itens.forEach((it,i)=>{
+    if(it.custo>0){
+      const d=1-(it.margem/100)-(it.sn/100);
+      it.vunit=d>0?it.custo/d:it.vunit;
+      it.lucro=it.vunit-it.custo-(it.vunit*(it.sn/100));
+    }
+  });
   renderItens();renderFrentes();
   // Atualizar título
   atualizarTituloProposta(p.numero||p.campos?.numero, p.versao);
