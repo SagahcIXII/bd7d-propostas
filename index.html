@@ -1303,6 +1303,10 @@ function renderCli(){
 
 // HISTÓRICO + STATUS
 function novaProposta(){
+  // Salvar proposta atual se existir
+  if(_propEditandoId !== null){
+    salvarProposta();
+  }
   itens=[];frentes=[];initItens();initFrentes();
   _propEditandoId=null;
   atualizarTituloProposta('','v1');
@@ -1393,37 +1397,83 @@ function renderPropostasList(q=''){
   const cnt=document.getElementById('prop-lista-cnt');
   if(!lista)return;
   const stFil=document.getElementById('prop-lista-filter')?.value||'';
-  let fil=[...state.propostas].sort((a,b)=>new Date(b.timestamp||b.atualizado_em||0)-new Date(a.timestamp||a.atualizado_em||0));
-  if(stFil)fil=fil.filter(p=>p.status===stFil);
-  if(q&&q.length)fil=fil.filter(p=>(p.cliente||'').toLowerCase().includes(q.toLowerCase())||(p.numero||'').toLowerCase().includes(q.toLowerCase()));
-  if(cnt)cnt.textContent=fil.length+' proposta(s)';
-  if(!fil.length){
+  
+  // Ordenar todas por timestamp desc
+  let todas=[...state.propostas].sort((a,b)=>new Date(b.timestamp||0)-new Date(a.timestamp||0));
+  if(stFil)todas=todas.filter(p=>p.status===stFil);
+  if(q&&q.length)todas=todas.filter(p=>(p.cliente||'').toLowerCase().includes(q.toLowerCase())||(p.numero||'').toLowerCase().includes(q.toLowerCase()));
+  
+  // Agrupar por número: só mostrar a versão mais recente (primeira do sort) de cada número
+  const vistas=new Set();
+  const principais=[];
+  const versoesPor={};
+  todas.forEach(p=>{
+    const num=p.numero||'';
+    if(!vistas.has(num)){
+      vistas.add(num);
+      principais.push(p);
+      versoesPor[num]=[];
+    } else {
+      versoesPor[num].push(p);
+    }
+  });
+  
+  if(cnt)cnt.textContent=principals_cnt(principais,todas)+' proposta(s)';
+  
+  if(!principais.length){
     lista.innerHTML='<div style="text-align:center;padding:60px;color:var(--text3);">Nenhuma proposta encontrada.<br><small>Clique em "+ Nova Proposta" para começar.</small></div>';
     return;
   }
-  lista.innerHTML=fil.map(p=>{
+  
+  lista.innerHTML=principais.map(p=>{
     const st=STATUS_MAP[p.status||'rascunho']||STATUS_MAP.rascunho;
     const dataFmt=fd(p.data||p.timestamp||'');
-    return`<div class="prop-card" onclick="abrirEdicaoPropostaById(${p.id})" style="cursor:pointer;">
-      <div style="display:flex;flex-direction:column;gap:2px;min-width:90px;">
-        <span class="prop-numero">${p.numero||'—'}</span>
-        <span class="vbadge" style="font-size:9px;width:fit-content;">${p.versao||'v1'}</span>
+    const versoes=versoesPor[p.numero||'']||[];
+    const temVersoes=versoes.length>0;
+    return`<div>
+      <div class="prop-card" onclick="abrirEdicaoPropostaById(${p.id})" style="cursor:pointer;">
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:90px;">
+          <span class="prop-numero">${p.numero||'—'}</span>
+          <span class="vbadge" style="font-size:9px;width:fit-content;">${p.versao||'v1'}</span>
+        </div>
+        <div style="flex:1;">
+          <div class="prop-cliente">${eh(p.cliente||'—')}</div>
+          <div class="prop-meta">${dataFmt}${temVersoes?' · <span style="font-size:10px;color:var(--text3);">'+versoes.length+' versão(ões) anterior(es)</span>':''}</div>
+        </div>
+        <div onclick="event.stopPropagation()">
+          <select class="status-select ${st.cls}" onchange="updStatus(${p.id},this.value);this.className='status-select '+STATUS_MAP[this.value].cls;">
+            ${Object.entries(STATUS_MAP).map(([k,sv])=>`<option value="${k}" ${p.status===k?'selected':''}>${sv.emoji} ${sv.lbl}</option>`).join('')}
+          </select>
+        </div>
+        <div class="prop-valor">R$ ${fmt(p.total||0)}</div>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();gerarPDFde(${p.id})" title="PDF">📄</button>
+        ${temVersoes?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toggleVersoes(${p.id})" title="Ver versões anteriores" style="font-size:10px;">🕐</button>`:'<span style="width:28px;"></span>'}
+        <button class="btn btn-danger btn-sm btn-icon" onclick="event.stopPropagation();deletarProposta(${p.id})" title="Excluir">✕</button>
       </div>
-      <div style="flex:1;">
-        <div class="prop-cliente">${eh(p.cliente||'—')}</div>
-        <div class="prop-meta">${dataFmt}</div>
-      </div>
-      <div onclick="event.stopPropagation()">
-        <select class="status-select ${st.cls}" onchange="updStatus(${p.id},this.value);this.className='status-select '+STATUS_MAP[this.value].cls;">
-          ${Object.entries(STATUS_MAP).map(([k,sv])=>`<option value="${k}" ${p.status===k?'selected':''}>${sv.emoji} ${sv.lbl}</option>`).join('')}
-        </select>
-      </div>
-      <div class="prop-valor">R$ ${fmt(p.total||0)}</div>
-      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();gerarPDFde(${p.id})" title="Gerar PDF">📄</button>
-      <button class="btn btn-danger btn-sm btn-icon" onclick="event.stopPropagation();deletarProposta(${p.id})" title="Excluir">✕</button>
+      ${temVersoes?`<div id="versoes-${p.id}" style="display:none;margin-left:24px;border-left:2px solid var(--border);padding-left:12px;">
+        ${versoes.map(v=>{const sv=STATUS_MAP[v.status||'rascunho']||STATUS_MAP.rascunho;return`
+          <div class="prop-card" onclick="abrirEdicaoPropostaById(${v.id})" style="cursor:pointer;background:var(--bg2);font-size:12px;padding:8px 12px;margin-bottom:4px;">
+            <span class="vbadge" style="font-size:9px;">${v.versao||'v?'}</span>
+            <span style="flex:1;font-size:11px;color:var(--text3);">${fd(v.data||v.timestamp||'')}</span>
+            <span style="font-size:11px;font-weight:600;">R$ ${fmt(v.total||0)}</span>
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();gerarPDFde(${v.id})" style="font-size:10px;">📄</button>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="event.stopPropagation();deletarProposta(${v.id})" style="width:20px;height:20px;font-size:10px;">✕</button>
+          </div>`;}).join('')}
+      </div>`:''}
     </div>`;
   }).join('');
 }
+
+function principals_cnt(principais, todas){
+  if(principais.length===todas.length)return principais.length;
+  return `${principais.length} (${todas.length} versões)`;
+}
+
+function toggleVersoes(id){
+  const el=document.getElementById('versoes-'+id);
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
+
 
 function deletarProposta(id){
   const p=state.propostas.find(x=>x.id===id);
@@ -1444,6 +1494,10 @@ function abrirEdicaoProposta(){
 }
 
 function abrirEdicaoPropostaById(id){
+  // Se há uma proposta aberta, salvar antes de trocar
+  if(_propEditandoId !== null && _propEditandoId !== id){
+    salvarProposta();
+  }
   carregarProp(id);
   const p=state.propostas.find(x=>x.id===id);
   if(p){
@@ -1557,8 +1611,13 @@ function carregarProp(id){
   document.getElementById('o-prazo').value=c.prazo||30;
   document.getElementById('o-hor').value=c.horario||'';
   document.getElementById('o-pag').value=c.pagamento||'';
-  itens=JSON.parse(JSON.stringify(c.itens||[]));
-  frentes=JSON.parse(JSON.stringify(c.frentes||[]));
+  // Reset itens ANTES de carregar para garantir que não vaza da proposta anterior
+  itens=[];frentes=[];
+  // Carregar itens da proposta (suporta tanto campos.itens quanto p.itens do Neon)
+  const itensData = c.itens || (p.campos_json && JSON.parse(p.campos_json||'{}').itens) || [];
+  const frentesData = c.frentes || [];
+  itens=JSON.parse(JSON.stringify(itensData));
+  frentes=JSON.parse(JSON.stringify(frentesData));
   if(c.checks){
     const map={hor:'ck-hor',alt:'ck-alt',civ:'ck-civ',ele:'ck-ele',con:'ck-con',art:'ck-art'};
     Object.entries(c.checks).forEach(([k,val])=>{const el=document.getElementById(map[k]);if(el){el.querySelector('input').checked=val;if(val){el.style.background='var(--accent-light)';el.style.borderColor='var(--accent2)';el.style.color='var(--accent)';}}});
